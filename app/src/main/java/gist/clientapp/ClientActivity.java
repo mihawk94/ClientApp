@@ -76,6 +76,7 @@ public class ClientActivity extends FragmentActivity {
 
         mConnectionFilter.addAction("LAN_RECEIVEDMSG");
         mConnectionFilter.addAction("NETWORK_ERROR");
+        mConnectionFilter.addAction("STATUS");
 
         mReceiver = new DataReceiver(this, mLANDeviceAdapter, mDeviceArrayList, mLANDeviceHashSet);
     }
@@ -111,7 +112,7 @@ public class ClientActivity extends FragmentActivity {
         }
 
         Intent i = new Intent(this, ConnectionService.class);
-        i.setAction("UpdateServerUI");
+        i.setAction("UpdateUI");
         startService(i);
     }
 

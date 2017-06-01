@@ -1,4 +1,4 @@
-package gist.clientapp;
+package com.example.clientapp;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -6,14 +6,19 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
 
 public class DataReceiver extends BroadcastReceiver{
 
@@ -52,6 +57,8 @@ public class DataReceiver extends BroadcastReceiver{
             case "STATUS":
                 status(context, intent);
                 break;
+            case "UPDATE_LIST":
+                update_list(context, intent);
             default:
                 break;
         }
@@ -76,38 +83,34 @@ public class DataReceiver extends BroadcastReceiver{
 
         if(!(mContext instanceof ClientActivity)) return;
 
-        String data = intent.getStringExtra("message");
-
-        String command = data.substring(0, data.indexOf(" "));
-        String subcommand = data.substring(data.indexOf(" ") + 1);
-
-        String value = subcommand.substring(0, data.indexOf(" "));
-        String address = value.substring(data.indexOf(" ") + 1);
+        String command = intent.getStringExtra("message");
+        String address = intent.getStringExtra("address");
+        String name = intent.getStringExtra("name");
 
         switch(command){
-            case "PRESS:":
-                press(value, address);
+            case "PRESS":
+                press(name, address);
                 break;
-            case "RELEASE:":
-                release(value, address);
+            case "RELEASE":
+                release(name, address);
                 break;
-            case "NAME:":
+            case "CONNECTION":
                 Log.d("Logging", "New connection..");
                 if(mLANDeviceHashSet.contains(address)) return;
                 mLANDeviceHashSet.add(address);
-                mDeviceArrayList.add(new LANDevice(value, address));
+                mDeviceArrayList.add(new LANDevice(name, address));
                 mDevices.notifyDataSetChanged();
 
 
                 Log.d("Logging", "New fragment..");
 
-                ControlFragment fragment = ControlFragment.newInstance(value);
+                ControlFragment fragment = ControlFragment.newInstance(name);
                 mFragmentManager.beginTransaction()
                         .add(R.id.fragment_container, fragment, address)
                         .addToBackStack(null)
                         .commit();
 
-                Toast.makeText(mContext, "'" + value + "' is connected", Toast.LENGTH_SHORT).show();
+                Toast.makeText(mContext, "'" + name + "' is connected", Toast.LENGTH_SHORT).show();
                 break;
             default:
                 break;
@@ -165,6 +168,70 @@ public class DataReceiver extends BroadcastReceiver{
 
     private void network_error(Context context, Intent intent){
 
+        String data = intent.getStringExtra("message");
+
+        String command = data.substring(0, data.indexOf("_"));
+        String address = data.substring(data.indexOf("/") + 1);
+
+        switch(command){
+            case "CONNECT:":
+            case "EXCHANGE_SERVER:":
+                if(mContext instanceof ClientActivity){
+                    Toast.makeText(mContext, "Error on broker connection", Toast.LENGTH_SHORT).show();
+                    ((ClientActivity)mContext).finish();
+                }
+                break;
+            case "EXCHANGE_CLIENT:":
+                Log.d("Logging", "EXCHANGE_CLIENT error called!");
+                if(!(mContext instanceof ClientActivity)) return;
+                if(!mLANDeviceHashSet.contains(address)){
+                    Log.d("Logging", "Device isn't connected");
+                    return;
+                }
+
+                Log.d("Logging", "Proceeding to remove the fragment and the item");
+
+                Fragment fragment = mFragmentManager.findFragmentByTag(address);
+                if(fragment != null){
+                    Log.d("Logging", "Removing fragment");
+                    FragmentTransaction fragmentTransaction = mFragmentManager.beginTransaction();
+                    fragmentTransaction.remove(fragment);
+                    fragmentTransaction.addToBackStack(null);
+                    fragmentTransaction.commit();
+                }
+
+                mLANDeviceHashSet.remove(address);
+
+                for(int i = 0; i < mDeviceArrayList.size(); i++){
+                    if(mDeviceArrayList.get(i).getAddress().equals(address)){
+                        mDeviceArrayList.remove(i);
+                        break;
+                    }
+                }
+
+                Fragment fragment1;
+
+                FragmentTransaction transaction = mFragmentManager.beginTransaction();
+
+                for (Fragment currentFragment : mFragmentManager.getFragments()) {
+                    transaction.hide(currentFragment);
+                }
+
+                if(!mDeviceArrayList.isEmpty()){
+                    fragment1 = mFragmentManager.findFragmentByTag(mDeviceArrayList.get(mDeviceArrayList.size()-1).getAddress());
+                    transaction.show(fragment1);
+                }
+                transaction.addToBackStack(null);
+                transaction.commit();
+
+
+
+                mDevices.notifyDataSetChanged();
+                Toast.makeText(mContext, "Disconnected: " + address, Toast.LENGTH_SHORT).show();
+                break;
+            default:
+                break;
+        }
     }
 
     private void status(Context context, Intent intent){
@@ -176,5 +243,30 @@ public class DataReceiver extends BroadcastReceiver{
         TextView status = (TextView) ((Activity)mContext).findViewById(R.id.status);
 
         status.setText(intent.getStringExtra("message"));
+    }
+
+    private void update_list(Context context, Intent intent){
+
+        HashMap<String, String> addresses = (HashMap<String, String>) intent.getSerializableExtra("addresses");
+
+        for(int i = 0; i < mDeviceArrayList.size(); i++){
+            if(!addresses.containsKey(mDeviceArrayList.get(i).getAddress())){
+                mLANDeviceHashSet.remove(mDeviceArrayList.get(i).getAddress());
+                mDeviceArrayList.remove(i);
+            }
+        }
+
+        mDevices.notifyDataSetChanged();
+
+        Iterator it = addresses.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry device = (Map.Entry)it.next();
+            if(!mLANDeviceHashSet.contains(device.getKey())){
+                mLANDeviceHashSet.add((String)device.getKey());
+                mDeviceArrayList.add(new LANDevice((String)device.getValue(), (String)device.getKey()));
+            }
+            it.remove();
+        }
+
     }
 }

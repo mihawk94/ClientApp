@@ -1,4 +1,4 @@
-package gist.clientapp;
+package com.example.clientapp;
 
 import android.app.Activity;
 import android.content.Context;

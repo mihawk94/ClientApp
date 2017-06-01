@@ -1,6 +1,5 @@
-package gist.clientapp;
+package com.example.clientapp;
 
-import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,7 +8,6 @@ import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class AdapterLANDevice extends ArrayAdapter<LANDevice>{
 

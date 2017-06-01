@@ -1,4 +1,4 @@
-package gist.clientapp;
+package com.example.clientapp;
 
 import android.os.Bundle;
 import android.support.annotation.Nullable;

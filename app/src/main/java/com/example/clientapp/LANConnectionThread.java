@@ -1,4 +1,4 @@
-package gist.clientapp;
+package com.example.clientapp;
 
 import android.content.Context;
 import android.content.Intent;
@@ -8,20 +8,17 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.ConnectException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Stack;
+import java.util.HashMap;
 
 public class LANConnectionThread extends Thread{
 
@@ -29,12 +26,14 @@ public class LANConnectionThread extends Thread{
     private Socket mSocket;
     private boolean mFinish;
     private String mAppName;
-    private HashSet<String> mStringHashSet;
+    private HashMap<String, String> mStringHashMap;
 
 
     public LANConnectionThread(Context context, String appName){
         mContext = context;
         mAppName = appName;
+        //cambiar esto por una pila.
+        mStringHashMap = new HashMap<String,String>();
     }
 
     public void run(){
@@ -54,29 +53,40 @@ public class LANConnectionThread extends Thread{
             return;
         }
 
+        mFinish = false;
 
-        try{
-            Log.d("Logging", "Trying to connect..");
-            mSocket.connect(new InetSocketAddress(LANConnectionThread.getMainAddress(LANConnectionThread.getMainInterface().getInetAddresses()), 48186));
-            Log.d("Logging", "Connected succesfully!");
-        } catch(IOException e){
-            try{
-                if(!mSocket.isClosed()) mSocket.close();
-            } catch(IOException e1){
+        while(!mFinish) {
+            try {
+                Log.d("Logging", "Trying to connect..");
+                mSocket.connect(new InetSocketAddress(LANConnectionThread.getMainAddress(LANConnectionThread.getMainInterface().getInetAddresses()), 48186));
+                Log.d("Logging", "Connected succesfully!");
+                break;
+            }  catch (ConnectException cex) {
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    continue;
+                }
+                continue;
+            } catch (IOException e) {
+                try {
+                    if (!mSocket.isClosed()) mSocket.close();
+                } catch (IOException e1) {
+                    //Information about the error
+                    intent = new Intent("NETWORK_ERROR");
+                    intent.putExtra("message", "CONNECT: Error closing socket after an error");
+                    LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
+                    return;
+                }
+                Log.d("Logging", e.toString());
                 //Information about the error
                 intent = new Intent("NETWORK_ERROR");
-                intent.putExtra("message", "CONNECT: Error closing socket after an error");
+                intent.putExtra("message", "CONNECT: Error while connecting socket to broker");
                 LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
                 return;
             }
-            Log.d("Logging", e.toString());
-            //Information about the error
-            intent = new Intent("NETWORK_ERROR");
-            intent.putExtra("message", "CONNECT: Error while connecting socket to broker");
-            LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
-            return;
-        }
 
+        }
 
         //Information about the error
         intent = new Intent("STATUS");
@@ -99,18 +109,16 @@ public class LANConnectionThread extends Thread{
             catch(IOException ioe){
                 //Information about the error
                 intent = new Intent("NETWORK_ERROR");
-                intent.putExtra("message", "EXCHANGE_CLIENT: Error while closing socket after an error");
+                intent.putExtra("message", "EXCHANGE_SERVER: Error while closing socket after an error");
                 LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
                 return;
             }
             //Information about the error
             intent = new Intent("NETWORK_ERROR");
-            intent.putExtra("message", "EXCHANGE_CLIENT: Error while creating socket input/output or writing output");
+            intent.putExtra("message", "EXCHANGE_SERVER: Error while creating socket input/output or writing output");
             LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
             return;
         }
-
-        mFinish = false;
 
         byte [] reply = new byte[1024];
         int bytes = 0;
@@ -137,16 +145,32 @@ public class LANConnectionThread extends Thread{
                 finish();
                 //Information about the error
                 intent = new Intent("NETWORK_ERROR");
-                intent.putExtra("message", "EXCHANGE_CLIENT: The broker has been disconnected");
+                intent.putExtra("message", "EXCHANGE_SERVER: The broker has been disconnected");
                 LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
                 return;
             }
 
             String message = new String(word);
 
-            intent = new Intent("LAN_RECEIVEDMSG");
+            String command = message.substring(0, data.indexOf("_"));
+            String address = message.substring(data.indexOf(":") + 1, data.indexOf("/"));
+            String name = message.substring(data.indexOf(" ") + 1);
 
-            intent.putExtra("message", message);
+            if(command.equals("CONNECTION")){
+                intent = new Intent("LAN_RECEIVEDMSG");
+
+                intent.putExtra("command", command);
+                intent.putExtra("address", address);
+                intent.putExtra("name", name);
+
+                mStringHashMap.put(address, name);
+            }
+            else if(command.equals("DISCONNECTION")){
+                intent = new Intent("NETWORK_ERROR");
+
+                intent.putExtra("message", "EXCHANGE_CLIENT: Device " + address + " has been disconnected");
+                mStringHashMap.remove(address);
+            }
 
             LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
         }
@@ -174,6 +198,10 @@ public class LANConnectionThread extends Thread{
             }
         }
         return null;
+    }
+
+    public HashMap<String, String> getStringHashMap(){
+        return mStringHashMap;
     }
 
     public void finish(){

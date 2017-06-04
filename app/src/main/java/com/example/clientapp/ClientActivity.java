@@ -2,10 +2,12 @@ package com.example.clientapp;
 
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.LocalBroadcastManager;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -22,6 +24,8 @@ public class ClientActivity extends FragmentActivity {
     private ConnectionListener mConnectionListener;
     private ArrayList<LANDevice> mDeviceArrayList;
     private HashSet<String> mLANDeviceHashSet;
+    private ImageView mTouch;
+    private Bitmap mBitmap;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -68,6 +72,13 @@ public class ClientActivity extends FragmentActivity {
 
     }
 
+    private void setListeners(){
+
+        mConnectionListener = new ConnectionListener(this, mLANDeviceAdapter);
+
+        mDevices.setOnItemClickListener(mConnectionListener);
+    }
+
     private void setReceiver(){
 
         mConnectionFilter = new IntentFilter();
@@ -75,15 +86,9 @@ public class ClientActivity extends FragmentActivity {
         mConnectionFilter.addAction("LAN_RECEIVEDMSG");
         mConnectionFilter.addAction("NETWORK_ERROR");
         mConnectionFilter.addAction("STATUS");
+        mConnectionFilter.addAction("UPDATE_LIST");
 
         mReceiver = new DataReceiver(this, mLANDeviceAdapter, mDeviceArrayList, mLANDeviceHashSet);
-    }
-
-    private void setListeners(){
-
-        mConnectionListener = new ConnectionListener(this, mLANDeviceAdapter);
-
-        mDevices.setOnItemClickListener(mConnectionListener);
     }
 
     protected void onDestroy(){

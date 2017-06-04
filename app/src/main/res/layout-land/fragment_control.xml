@@ -2,81 +2,100 @@
               android:layout_width="match_parent"
               android:layout_height="match_parent"
               android:orientation="vertical">
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:elevation="5dp"
-                  android:background="@drawable/connected_layout"
-                  android:gravity="center">
-        <TextView
-            android:id="@+id/device_name_title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="#000000"
-            android:padding="4dp"
-            android:text="Device name: "/>
-    </LinearLayout>
     <LinearLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:clipToPadding="false">
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="5dp">
-            <Button
-                android:id="@+id/ch_up"
+        android:orientation="vertical">
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:elevation="5dp"
+                      android:background="@drawable/connected_layout"
+                      android:gravity="center">
+            <TextView
+                android:id="@+id/device_name_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:elevation="4dp"
-                android:text="CH+"
-                android:background="@drawable/control_button"
-                />
+                android:gravity="center"
+                android:textColor="#000000"
+                android:padding="4dp"
+                android:text="Device name: "/>
         </LinearLayout>
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="5dp"
+            android:layout_height="match_parent"
             android:orientation="horizontal">
-            <Button
-                android:id="@+id/vol_down"
-                android:layout_weight="1"
+            <com.example.clientapp.TouchView
+                android:id="@+id/touch"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:elevation="4dp"
-                android:text="VOL-"
-                android:background="@drawable/control_button"
-                />
-            <View
-                android:layout_width="5dp"
+                android:orientation="vertical"
                 android:layout_height="match_parent"
-                />
-            <Button
-                android:id="@+id/vol_up"
                 android:layout_weight="1"
+                android:background="@drawable/touch_bitmap">
+            </com.example.clientapp.TouchView>
+            <LinearLayout
+                xmlns:android="http://schemas.android.com/apk/res/android"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:elevation="4dp"
-                android:text="VOL+"
-                android:background="@drawable/control_button"
-                />
-        </LinearLayout>
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="5dp">
-            <Button
-                android:id="@+id/ch_down"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:elevation="4dp"
-                android:text="CH-"
-                android:background="@drawable/control_button"
-                />
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:clipToPadding="false">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="5dp">
+                    <Button
+                        android:id="@+id/ch_up"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:elevation="4dp"
+                        android:text="CH+"
+                        android:background="@drawable/control_button"
+                        />
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="5dp"
+                    android:orientation="horizontal">
+                    <Button
+                        android:id="@+id/vol_down"
+                        android:layout_weight="1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:elevation="4dp"
+                        android:text="VOL-"
+                        android:background="@drawable/control_button"
+                        />
+                    <View
+                        android:layout_width="5dp"
+                        android:layout_height="match_parent"
+                        />
+                    <Button
+                        android:id="@+id/vol_up"
+                        android:layout_weight="1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:elevation="4dp"
+                        android:text="VOL+"
+                        android:background="@drawable/control_button"
+                        />
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="5dp">
+                    <Button
+                        android:id="@+id/ch_down"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:elevation="4dp"
+                        android:text="CH-"
+                        android:background="@drawable/control_button"
+                        />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

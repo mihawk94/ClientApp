@@ -4,13 +4,18 @@ import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
+import android.text.method.Touch;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,6 +24,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+
+import static android.R.attr.bitmap;
 
 public class DataReceiver extends BroadcastReceiver{
 
@@ -42,7 +49,7 @@ public class DataReceiver extends BroadcastReceiver{
     @Override
     public void onReceive(Context context, Intent intent) {
 
-        Log.d("Logging", "Receiver has received a new message");
+        Log.d("Logging", "Receiver has received a new message: " + intent.getAction());
 
         switch(intent.getAction()){
             case "ENABLE_APPBUTTON":
@@ -59,6 +66,7 @@ public class DataReceiver extends BroadcastReceiver{
                 break;
             case "UPDATE_LIST":
                 update_list(context, intent);
+                break;
             default:
                 break;
         }
@@ -83,9 +91,11 @@ public class DataReceiver extends BroadcastReceiver{
 
         if(!(mContext instanceof ClientActivity)) return;
 
-        String command = intent.getStringExtra("message");
+        String command = intent.getStringExtra("command");
         String address = intent.getStringExtra("address");
         String name = intent.getStringExtra("name");
+
+        Log.d("Logging", "Received command: " + command);
 
         switch(command){
             case "PRESS":
@@ -111,6 +121,12 @@ public class DataReceiver extends BroadcastReceiver{
                         .commit();
 
                 Toast.makeText(mContext, "'" + name + "' is connected", Toast.LENGTH_SHORT).show();
+                break;
+            case "TOUCH":
+                touch(name, address);
+                break;
+            case "TOUCHRELEASE":
+                touchRelease(name, address);
                 break;
             default:
                 break;
@@ -142,23 +158,23 @@ public class DataReceiver extends BroadcastReceiver{
         }
     }
 
-    private void release(String value, String address){
-        if(mFragmentManager.findFragmentByTag(address) == null) return;
-        switch (value){
+    private void release(String value, String address) {
+        if (mFragmentManager.findFragmentByTag(address) == null) return;
+        switch (value) {
             case "CH_UP":
-                ((GradientDrawable)mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.ch_up)
+                ((GradientDrawable) mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.ch_up)
                         .getBackground()).setColor(Color.parseColor("#616161"));
                 break;
             case "VOL_DOWN":
-                ((GradientDrawable)mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.vol_down)
+                ((GradientDrawable) mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.vol_down)
                         .getBackground()).setColor(Color.parseColor("#616161"));
                 break;
             case "VOL_UP":
-                ((GradientDrawable)mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.vol_up)
+                ((GradientDrawable) mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.vol_up)
                         .getBackground()).setColor(Color.parseColor("#616161"));
                 break;
             case "CH_DOWN":
-                ((GradientDrawable)mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.ch_down)
+                ((GradientDrawable) mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.ch_down)
                         .getBackground()).setColor(Color.parseColor("#616161"));
                 break;
             default:
@@ -166,18 +182,66 @@ public class DataReceiver extends BroadcastReceiver{
         }
     }
 
+    private void touch(String value, String address){
+        if (mFragmentManager.findFragmentByTag(address) == null) return;
+
+        TouchView touch = (TouchView)mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.touch);
+
+        Bitmap bitmap = ((BitmapDrawable)touch.getDrawable()).getBitmap();
+        bitmap.setHasAlpha(true);
+
+        int touchWidth = touch.getWidth();
+        int touchHeight = touch.getHeight();
+
+        String x_str = value.substring(0, value.indexOf(" "));
+        Log.d("Logging", "X string: " + x_str);
+        String y_str = value.substring(value.indexOf(" ") + 1);
+        Log.d("Logging", "Y string: " + y_str);
+
+        float xPercentage = Float.parseFloat(x_str.substring(x_str.indexOf(":") + 1));
+        float yPercentage = Float.parseFloat(y_str.substring(y_str.indexOf(":") + 1));
+
+        float x = touchWidth * xPercentage;
+        float y = touchHeight * yPercentage;
+
+        Log.d("Logging", "Touch width: " + touchWidth + " Touch height: " + touchHeight);
+
+        for(int i = ((int)x) - 100; i < ((int)x) + 101; i++){
+            for(int j = ((int)y) - 100; j < ((int)y) + 101; j++ ){
+                bitmap.setPixel((int)x, (int)y, Color.BLACK);
+            }
+        }
+
+        touch.setImageBitmap(bitmap);
+
+
+    }
+
+    private void touchRelease(String value, String address){
+        if (mFragmentManager.findFragmentByTag(address) == null) return;
+
+        Bitmap bitmap = ((BitmapDrawable)((TouchView)mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.touch))
+                .getDrawable()).getBitmap();
+
+        bitmap.eraseColor(Color.parseColor("#FF4081"));
+    }
+
     private void network_error(Context context, Intent intent){
 
         String data = intent.getStringExtra("message");
 
-        String command = data.substring(0, data.indexOf("_"));
-        String address = data.substring(data.indexOf("/") + 1);
+        Log.d("Logging", "Network error received: " + data);
+
+        String command = data.substring(0, data.indexOf(" "));
+        String address = data.substring(data.indexOf(" ") + 1);
 
         switch(command){
             case "CONNECT:":
+                Toast.makeText(mContext, "Error on broker connection: " + address, Toast.LENGTH_SHORT).show();
+                break;
             case "EXCHANGE_SERVER:":
                 if(mContext instanceof ClientActivity){
-                    Toast.makeText(mContext, "Error on broker connection", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(mContext, "Error on broker connection: " + address, Toast.LENGTH_SHORT).show();
                     ((ClientActivity)mContext).finish();
                 }
                 break;
@@ -225,7 +289,6 @@ public class DataReceiver extends BroadcastReceiver{
                 transaction.commit();
 
 
-
                 mDevices.notifyDataSetChanged();
                 Toast.makeText(mContext, "Disconnected: " + address, Toast.LENGTH_SHORT).show();
                 break;
@@ -248,25 +311,75 @@ public class DataReceiver extends BroadcastReceiver{
     private void update_list(Context context, Intent intent){
 
         HashMap<String, String> addresses = (HashMap<String, String>) intent.getSerializableExtra("addresses");
+        Log.d("Logging", "" + addresses.size());
 
         for(int i = 0; i < mDeviceArrayList.size(); i++){
             if(!addresses.containsKey(mDeviceArrayList.get(i).getAddress())){
-                mLANDeviceHashSet.remove(mDeviceArrayList.get(i).getAddress());
-                mDeviceArrayList.remove(i);
+
+                delete_fragment(mDeviceArrayList.get(i).getAddress(), i);
             }
         }
-
-        mDevices.notifyDataSetChanged();
 
         Iterator it = addresses.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry device = (Map.Entry)it.next();
             if(!mLANDeviceHashSet.contains(device.getKey())){
-                mLANDeviceHashSet.add((String)device.getKey());
-                mDeviceArrayList.add(new LANDevice((String)device.getValue(), (String)device.getKey()));
+                add_fragment((String)device.getValue(), (String)device.getKey());
             }
             it.remove();
         }
+
+    }
+
+    private void delete_fragment(String address, int i){
+
+        Fragment fragment = mFragmentManager.findFragmentByTag(address);
+        if(fragment != null){
+            Log.d("Logging", "Removing fragment");
+            FragmentTransaction fragmentTransaction = mFragmentManager.beginTransaction();
+            fragmentTransaction.remove(fragment);
+            fragmentTransaction.addToBackStack(null);
+            fragmentTransaction.commit();
+        }
+
+        mLANDeviceHashSet.remove(address);
+
+        mDeviceArrayList.remove(i);
+
+        Fragment fragment1;
+
+        FragmentTransaction transaction = mFragmentManager.beginTransaction();
+
+        for (Fragment currentFragment : mFragmentManager.getFragments()) {
+            transaction.hide(currentFragment);
+        }
+
+        if(!mDeviceArrayList.isEmpty()){
+            fragment1 = mFragmentManager.findFragmentByTag(mDeviceArrayList.get(mDeviceArrayList.size()-1).getAddress());
+            transaction.show(fragment1);
+        }
+        transaction.addToBackStack(null);
+        transaction.commit();
+
+
+        mDevices.notifyDataSetChanged();
+
+    }
+
+    private void add_fragment(String name, String address){
+
+        mLANDeviceHashSet.add(address);
+        mDeviceArrayList.add(new LANDevice(name, address));
+
+        Log.d("Logging", "New fragment. Name: " + name + ", address: " + address);
+
+        ControlFragment fragment = ControlFragment.newInstance(name);
+        mFragmentManager.beginTransaction()
+                .add(R.id.fragment_container, fragment, address)
+                .addToBackStack(null)
+                .commit();
+
+        mDevices.notifyDataSetChanged();
 
     }
 }

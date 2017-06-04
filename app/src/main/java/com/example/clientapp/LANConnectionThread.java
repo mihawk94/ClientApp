@@ -2,11 +2,17 @@ package com.example.clientapp;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.Inet4Address;
@@ -20,6 +26,8 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 
+import static android.content.Context.MODE_PRIVATE;
+
 public class LANConnectionThread extends Thread{
 
     private Context mContext;
@@ -32,30 +40,41 @@ public class LANConnectionThread extends Thread{
     public LANConnectionThread(Context context, String appName){
         mContext = context;
         mAppName = appName;
-        //cambiar esto por una pila.
         mStringHashMap = new HashMap<String,String>();
+        File file = new File(mContext.getDir("data", MODE_PRIVATE), "map");
+        try{
+            ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream(file));
+            outputStream.writeObject(mStringHashMap);
+            outputStream.flush();
+            outputStream.close();
+        }
+        catch(Exception e){
+            return;
+        }
     }
 
     public void run(){
         Intent intent;
 
         Log.d("Logging", "Connecting socket");
-        try {
-            mSocket = new Socket();
-            mSocket.setReuseAddress(true);
-            mSocket.bind(new InetSocketAddress(LANConnectionThread.getMainAddress(LANConnectionThread.getMainInterface().getInetAddresses()), 48185));
-        } catch (IOException e) {
-            Log.d("Logging", "Creating socket error");
-            //Information about the error
-            intent = new Intent("NETWORK_ERROR");
-            intent.putExtra("message", "CONNECT: Error while creating socket after an error");
-            LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
-            return;
-        }
 
         mFinish = false;
 
         while(!mFinish) {
+
+            try {
+                mSocket = new Socket();
+                mSocket.setReuseAddress(true);
+                mSocket.bind(new InetSocketAddress(LANConnectionThread.getMainAddress(LANConnectionThread.getMainInterface().getInetAddresses()), 48185));
+            } catch (IOException e) {
+                Log.d("Logging", "Creating socket error");
+                //Information about the error
+                intent = new Intent("NETWORK_ERROR");
+                intent.putExtra("message", "CONNECT: Error while creating socket after an error");
+                LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
+                return;
+            }
+
             try {
                 Log.d("Logging", "Trying to connect..");
                 mSocket.connect(new InetSocketAddress(LANConnectionThread.getMainAddress(LANConnectionThread.getMainInterface().getInetAddresses()), 48186));
@@ -63,6 +82,7 @@ public class LANConnectionThread extends Thread{
                 break;
             }  catch (ConnectException cex) {
                 try {
+                    Log.d("Logging", cex.toString());
                     Thread.sleep(5000);
                 } catch (InterruptedException e) {
                     continue;
@@ -88,9 +108,11 @@ public class LANConnectionThread extends Thread{
 
         }
 
-        //Information about the error
+        ((ConnectionService)mContext).setStatus("STATUS: Connected");
         intent = new Intent("STATUS");
         intent.putExtra("message", "STATUS: Connected");
+
+
         LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
 
         String data = "NAME: " + mAppName;
@@ -137,40 +159,96 @@ public class LANConnectionThread extends Thread{
                 return;
             }
 
+            String message;
+
             if(bytes != -1){
                 word = Arrays.copyOfRange(reply, 0, bytes);
-                Log.d("Logging", new String(word));
+                message = new String(word);
+                Log.d("Logging", "Client app received a new message: " + message);
             }
             else{
                 finish();
                 //Information about the error
                 intent = new Intent("NETWORK_ERROR");
-                intent.putExtra("message", "EXCHANGE_SERVER: The broker has been disconnected");
+                intent.putExtra("message", "EXCHANGE_SERVER: The broker has been disconnected the socket");
                 LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
                 return;
             }
 
-            String message = new String(word);
-
-            String command = message.substring(0, data.indexOf("_"));
-            String address = message.substring(data.indexOf(":") + 1, data.indexOf("/"));
-            String name = message.substring(data.indexOf(" ") + 1);
+            String command = message.substring(0, message.indexOf("_"));
+            String address = message.substring(message.indexOf(":") + 1, message.indexOf("/"));
+            String name = message.substring(message.indexOf(" ") + 1);
 
             if(command.equals("CONNECTION")){
+                Log.d("Logging", "New connection...");
+
+                intent = new Intent("LAN_RECEIVEDMSG");
+                intent.putExtra("command", command);
+                intent.putExtra("address", address);
+                intent.putExtra("name", name);
+
+                File file = new File(mContext.getDir("data", MODE_PRIVATE), "map");
+                try{
+                    ObjectInputStream inputStream = new ObjectInputStream(new FileInputStream(file));
+                    mStringHashMap = (HashMap<String, String>) inputStream.readObject();
+                    inputStream.close();
+                }
+                catch(Exception e){
+                    return;
+                }
+
+                mStringHashMap.put(address, name);
+
+                file = new File(mContext.getDir("data", MODE_PRIVATE), "map");
+                try{
+                    ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream(file));
+                    outputStream.writeObject(mStringHashMap);
+                    outputStream.flush();
+                    outputStream.close();
+                }
+                catch(Exception e){
+                    return;
+                }
+
+            }
+            else if(command.equals("DISCONNECTION")){
+                Log.d("Logging", "Removing..");
+                intent = new Intent("NETWORK_ERROR");
+
+                intent.putExtra("message", "EXCHANGE_CLIENT: " + address);
+                File file = new File(mContext.getDir("data", MODE_PRIVATE), "map");
+                try{
+                    ObjectInputStream inputStream = new ObjectInputStream(new FileInputStream(file));
+                    mStringHashMap = (HashMap<String, String>) inputStream.readObject();
+                    inputStream.close();
+                }
+                catch(Exception e){
+                    return;
+                }
+                mStringHashMap.remove(address);
+
+                file = new File(mContext.getDir("data", MODE_PRIVATE), "map");
+                try{
+                    ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream(file));
+                    outputStream.writeObject(mStringHashMap);
+                    outputStream.flush();
+                    outputStream.close();
+                }
+                catch(Exception e){
+                    return;
+                }
+            }
+            else{
+
                 intent = new Intent("LAN_RECEIVEDMSG");
 
                 intent.putExtra("command", command);
                 intent.putExtra("address", address);
                 intent.putExtra("name", name);
 
-                mStringHashMap.put(address, name);
             }
-            else if(command.equals("DISCONNECTION")){
-                intent = new Intent("NETWORK_ERROR");
 
-                intent.putExtra("message", "EXCHANGE_CLIENT: Device " + address + " has been disconnected");
-                mStringHashMap.remove(address);
-            }
+            Log.d("Logging", "Message: " + command + "_" + address + "_" + name);
 
             LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
         }
@@ -221,5 +299,9 @@ public class LANConnectionThread extends Thread{
                 return;
             }
         }
+    }
+
+    public boolean isFinished(){
+        return mFinish;
     }
 }

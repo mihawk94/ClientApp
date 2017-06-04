@@ -1,11 +1,14 @@
 package com.example.clientapp;
 
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 public class ControlFragment extends Fragment {
@@ -23,7 +26,9 @@ public class ControlFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_control, container, false);
+
         ((TextView)v.findViewById(R.id.device_name_title)).setText("Device name: " + getArguments().getString("name"));
         return v;
     }
+
 }

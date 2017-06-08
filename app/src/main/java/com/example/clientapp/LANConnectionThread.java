@@ -124,6 +124,7 @@ public class LANConnectionThread extends Thread{
             tmpIn = mSocket.getInputStream();
             tmpOut = mSocket.getOutputStream();
             tmpOut.write(data.getBytes());
+            tmpOut.flush();
         } catch (IOException e) {
             try{
                 if(!mSocket.isClosed()) mSocket.close();
@@ -226,6 +227,7 @@ public class LANConnectionThread extends Thread{
                     return;
                 }
                 mStringHashMap.remove(address);
+                Log.d("Logging", "Device removed from hashmap");
 
                 file = new File(mContext.getDir("data", MODE_PRIVATE), "map");
                 try{

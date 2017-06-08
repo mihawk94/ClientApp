@@ -5,7 +5,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.support.v4.app.Fragment;
@@ -189,6 +191,7 @@ public class DataReceiver extends BroadcastReceiver{
 
         Bitmap bitmap = ((BitmapDrawable)touch.getDrawable()).getBitmap();
         bitmap.setHasAlpha(true);
+        Canvas canvas = new Canvas(bitmap);
 
         int touchWidth = touch.getWidth();
         int touchHeight = touch.getHeight();
@@ -206,11 +209,9 @@ public class DataReceiver extends BroadcastReceiver{
 
         Log.d("Logging", "Touch width: " + touchWidth + " Touch height: " + touchHeight);
 
-        for(int i = ((int)x) - 100; i < ((int)x) + 101; i++){
-            for(int j = ((int)y) - 100; j < ((int)y) + 101; j++ ){
-                bitmap.setPixel((int)x, (int)y, Color.BLACK);
-            }
-        }
+        Paint p = new Paint();
+        p.setColor(Color.BLACK);
+        canvas.drawCircle(x, y, touchWidth/10, p);
 
         touch.setImageBitmap(bitmap);
 
@@ -220,10 +221,13 @@ public class DataReceiver extends BroadcastReceiver{
     private void touchRelease(String value, String address){
         if (mFragmentManager.findFragmentByTag(address) == null) return;
 
-        Bitmap bitmap = ((BitmapDrawable)((TouchView)mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.touch))
-                .getDrawable()).getBitmap();
+        TouchView touch = (TouchView)mFragmentManager.findFragmentByTag(address).getView().findViewById(R.id.touch);
 
-        bitmap.eraseColor(Color.parseColor("#FF4081"));
+        Bitmap bitmap = ((BitmapDrawable)touch.getDrawable()).getBitmap();
+
+        bitmap.eraseColor(Color.TRANSPARENT);
+
+        touch.setImageBitmap(bitmap);
     }
 
     private void network_error(Context context, Intent intent){
@@ -310,13 +314,17 @@ public class DataReceiver extends BroadcastReceiver{
 
     private void update_list(Context context, Intent intent){
 
+
+
         HashMap<String, String> addresses = (HashMap<String, String>) intent.getSerializableExtra("addresses");
         Log.d("Logging", "" + addresses.size());
+        Log.d("Logging", "" + mDeviceArrayList.size());
 
         for(int i = 0; i < mDeviceArrayList.size(); i++){
+            Log.d("Logging", mDeviceArrayList.get(i).getAddress());
             if(!addresses.containsKey(mDeviceArrayList.get(i).getAddress())){
-
                 delete_fragment(mDeviceArrayList.get(i).getAddress(), i);
+                i -= 1;
             }
         }
 
